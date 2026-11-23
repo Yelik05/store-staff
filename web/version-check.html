@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>版本自检 · 塔斯汀门店人员管理系统</title>
+<style>
+body{margin:0;padding:24px;font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#1f2329;background:#f6f7f9}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:20px;margin:0 0 6px}
+p.lead{color:#5c6370;margin:0 0 18px}
+.card{background:#fff;border:1px solid #e6e8eb;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #eef0f2;vertical-align:top}
+th{color:#5c6370;font-weight:600}
+.pass{color:#1a7f37;font-weight:600}
+.fail{color:#E10600;font-weight:600}
+.muted{color:#8a9099}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;background:#eef4ff;color:#2b5fd9;font-size:12px}
+pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>版本自检</h1>
+  <p class="lead">本页直接读取线上实际加载的脚本与后端构建标识，用来确认导入修复是否真正生效。无需登录，刷新即重新检测。</p>
+  <div class="card">
+    <div style="margin-bottom:8px"><b>页面引用版本</b></div>
+    <div id="htmlVersion" class="muted">检测中…</div>
+  </div>
+  <div class="card">
+    <div style="margin-bottom:8px"><b>前端文件</b></div>
+    <table>
+      <thead><tr><th style="width:34%">文件</th><th style="width:16%">关键标记</th><th style="width:14%">结论</th><th>SHA-256（前 16 位）</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4" class="muted">检测中…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div style="margin-bottom:8px"><b>后端（PHP）</b></div>
+    <div id="php" class="muted">检测中…</div>
+    <pre id="phpRaw" style="display:none"></pre>
+  </div>
+  <p style="text-align:center;font-size:12px;color:#8a9099;margin:18px 0 8px;">系统支持 <a href="landing/index.html" style="color:inherit;text-decoration:none;">塔斯汀门店助手</a></p>
+</div>
+<script>
+(function () {
+  var CHECKS = [
+    { file: 'assets/js/xlsx-lite.js', label: '解析器', marks: ['mapAttendanceRows', 'normDate'] },
+    { file: 'assets/js/api.js', label: '字段归一', marks: ['normalizeImportRows'] },
+    { file: 'assets/js/import-flow.js', label: '共享导入流程', marks: ['解析结果缺少日期字段', '解析样本（前', '客户端校验'] },
+    { file: 'assets/js/pages/admin-attendance.js', label: '台账页复用', marks: ['ImportFlow.pick'] }
+  ];
+
+  function hex(buf) {
+    var a = new Uint8Array(buf), s = '';
+    for (var i = 0; i < a.length; i++) s += ('0' + a[i].toString(16)).slice(-2);
+    return s;
+  }
+  function sha256(text) {
+    if (!window.crypto || !crypto.subtle) return Promise.resolve('当前环境不支持');
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (b) { return hex(b).slice(0, 16); });
+  }
+  function fetchText(url) {
+    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + '_ts=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); });
+  }
+
+  fetchText('admin-attendance.html').then(function (html) {
+    var m = /xlsx-lite\.js\?v=([^"&']+)/.exec(html);
+    var u = /util\.js\?v=([^"&']+)/.exec(html);
+    var a = /pages\/admin-attendance\.js\?v=([^"&']+)/.exec(html);
+    document.getElementById('htmlVersion').innerHTML =
+      'admin-attendance.html：解析脚本 <span class="badge">v' + (m ? m[1] : '缺失') + '</span> · ' +
+      '页面脚本 <span class="badge">v' + (a ? a[1] : '缺失') + '</span> · ' +
+      'util.js <span class="badge">v' + (u ? u[1] : '缺失') + '</span>';
+  }).catch(function (e) {
+    document.getElementById('htmlVersion').textContent = '读取 admin-attendance.html 失败：' + e.message;
+  });
+
+  var tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  CHECKS.forEach(function (c) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="mono">' + c.file + '</td><td class="muted">' + c.label + '</td><td class="muted">检测中…</td><td class="mono muted">—</td>';
+    tbody.appendChild(tr);
+    fetchText(c.file).then(function (text) {
+      var missing = c.marks.filter(function (k) { return text.indexOf(k) < 0; });
+      return sha256(text).then(function (h) {
+        tr.children[2].innerHTML = missing.length
+          ? '<span class="fail">旧版本</span>'
+          : '<span class="pass">已包含修复</span>';
+        tr.children[3].textContent = h;
+        if (missing.length) tr.children[2].title = '缺少：' + missing.join('、');
+      });
+    }).catch(function (e) {
+      tr.children[2].innerHTML = '<span class="fail">读取失败</span>';
+      tr.children[3].textContent = e.message;
+    });
+  });
+
+  var php = document.getElementById('php');
+  var raw = document.getElementById('phpRaw');
+  fetch('api.php?action=system.build', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+    cache: 'no-store'
+  }).then(function (r) { return r.text(); }).then(function (text) {
+    var json = null;
+    try { json = JSON.parse(text); } catch (e) {}
+    if (!json) throw new Error('返回非 JSON（可能是静态版或服务器异常）：' + text.slice(0, 120));
+    if (!json.ok) throw new Error(json.error || '接口返回失败');
+    var d = json.data || {};
+    var all = d.build && d.attendanceImportRow && d.salaryImportRow;
+    php.innerHTML = '构建标识 <span class="badge">' + (d.build || '未知') + '</span> · ' +
+      (all ? '<span class="pass">后端已包含本次修复</span>' : '<span class="fail">后端缺少本次修复</span>') +
+      '<div class="muted" style="margin-top:6px">attendance_import_row：' + (d.attendanceImportRow ? '有' : '无') +
+      ' · salary_import_row：' + (d.salaryImportRow ? '有' : '无') + ' · PHP ' + (d.phpVersion || '—') + '</div>';
+    raw.style.display = 'block';
+    raw.textContent = JSON.stringify(d, null, 2);
+  }).catch(function (e) {
+    php.innerHTML = '<span class="muted">静态版或未部署 PHP 后端：' + e.message + '</span>';
+  });
+})();
+</script>
+<script src="assets/js/theme.js?v=202611308"></script>
+</body>
+</html>

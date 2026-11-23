@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>塔斯汀门店人员管理系统 · 三端源码</title>
+<meta name="description" content="门店人员管理系统三端源码导航：Web（PHP + MySQL）、Android（Kotlin + Compose）、iOS（SwiftUI）。">
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --brand:#E10600;
+    --brand-ink:#B90500;
+    --brand-soft:#FDECEA;
+    --bg:#F6F4F0;
+    --bg-2:#EFECE6;
+    --surface:#FFFFFF;
+    --surface-2:#FBF9F6;
+    --text:#1A1613;
+    --muted:#6C655E;
+    --line:#E5E0D8;
+    --line-strong:#D6CFC4;
+    --ok:#1F7A4D;
+    --ok-soft:#E7F2EB;
+    --shadow:0 18px 50px rgba(38,24,12,.10);
+    --shadow-sm:0 6px 18px rgba(38,24,12,.07);
+    --radius:20px;
+    --max:1160px;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --brand:#FF4B3E;
+      --brand-ink:#FF6B5E;
+      --brand-soft:rgba(225,6,0,.16);
+      --bg:#0F0F0F;
+      --bg-2:#151412;
+      --surface:#191816;
+      --surface-2:#211F1C;
+      --text:#F4F0EA;
+      --muted:#A79F96;
+      --line:#2C2925;
+      --line-strong:#3A352F;
+      --ok:#6FD3A0;
+      --ok-soft:rgba(52,168,110,.16);
+      --shadow:0 22px 60px rgba(0,0,0,.55);
+      --shadow-sm:0 8px 22px rgba(0,0,0,.45);
+      color-scheme:dark;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+    font-size:16px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{width:100%;max-width:var(--max);margin:0 auto;padding:0 20px}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--brand);font-weight:700;
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;background:var(--brand);border-radius:2px}
+  h1,h2,h3{margin:0;line-height:1.18;letter-spacing:-.02em;font-weight:800}
+  h1{font-size:clamp(32px,4.2vw,52px)}
+  h3{font-size:19px}
+  p{margin:0}
+  .muted{color:var(--muted)}
+
+  .site-header{
+    position:sticky;top:0;z-index:10;
+    background:color-mix(in srgb,var(--bg) 86%,transparent);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-inner{height:64px;display:flex;align-items:center;gap:16px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-mark{
+    width:34px;height:34px;border-radius:10px;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;
+  }
+  .brand-name{font-weight:800;font-size:15px;white-space:nowrap}
+  .brand-sub{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .nav{margin-left:auto;display:flex;gap:20px}
+  .nav a{font-size:14px;font-weight:600;color:var(--muted);padding:6px 0;border-bottom:2px solid transparent}
+  .nav a:hover{color:var(--text);border-color:var(--brand)}
+
+  .hero{padding:clamp(52px,7vw,92px) 0 28px}
+  .hero h1{margin:14px 0 16px;max-width:820px}
+  .hero p.lead{max-width:720px;color:var(--muted);font-size:clamp(15px,1.7vw,18px)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .chip{
+    font-size:12.5px;font-weight:600;color:var(--muted);
+    border:1px solid var(--line);background:var(--surface);
+    padding:6px 12px;border-radius:999px;
+  }
+
+  .section{padding:26px 0 clamp(56px,7vw,90px)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{
+    display:flex;flex-direction:column;gap:12px;
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:26px;
+    box-shadow:var(--shadow-sm);
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  }
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--line-strong)}
+  .mono{
+    width:44px;height:44px;border-radius:13px;
+    background:var(--brand-soft);color:var(--brand);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:18px;letter-spacing:.02em;
+  }
+  .card p{color:var(--muted);font-size:14.5px}
+  .tags{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0;padding:0}
+  .tags li{
+    font-size:11.5px;font-weight:600;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--line);
+    padding:3px 9px;border-radius:999px;
+  }
+  .go{margin-top:auto;padding-top:6px;font-size:13.5px;font-weight:700;color:var(--brand)}
+  .note{
+    margin-top:22px;display:flex;gap:10px;align-items:flex-start;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:14px;
+    padding:14px 16px;font-size:13.5px;color:var(--muted);
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);margin-top:7px;flex:none}
+
+  footer{border-top:1px solid var(--line);padding:26px 0 40px}
+  .footer-inner{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+  .footer-inner a{color:var(--text);font-weight:600}
+  .footer-inner a:hover{color:var(--brand)}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="./">
+      <span class="brand-mark">塔</span>
+      <span>
+        <span class="brand-name">门店人员管理系统</span>
+        <span class="brand-sub">三端源码 · Web / Android / iOS</span>
+      </span>
+    </a>
+    <nav class="nav">
+      <a href="#web">网页端</a>
+      <a href="#android">Android</a>
+      <a href="#ios">iOS</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <span class="eyebrow">三端一体 · 门店协作</span>
+    <h1>一套接口，三种客户端</h1>
+    <p class="lead">任务闭环、效期管理、排班排休、考勤工时、薪资、量化分、报销、通讯录与私信。网页端带管理后台，Android 与 iOS 为原生员工端，数据全部来自同一套 PHP 接口。</p>
+    <div class="chips">
+      <span class="chip">PHP + MySQL</span>
+      <span class="chip">Kotlin + Compose</span>
+      <span class="chip">SwiftUI</span>
+      <span class="chip">深色 / 浅色</span>
+    </div>
+  </section>
+
+  <section class="wrap section" id="web">
+    <div class="grid">
+      <a class="card" href="web/">
+        <span class="mono">W</span>
+        <h3>网页端与管理后台</h3>
+        <p>员工端页面 + 管理员后台，包含完整的员工、任务、排班、考勤、薪资、效期、公告与报销管理。PHP 单入口接口，无前端构建步骤。</p>
+        <ul class="tags"><li>PHP 7.4+</li><li>MySQL</li><li>原生 JS</li><li>管理后台</li></ul>
+        <span class="go">进入 web/ →</span>
+      </a>
+
+      <a class="card" href="android/" id="android">
+        <span class="mono">A</span>
+        <h3>Android 原生端</h3>
+        <p>Kotlin + Jetpack Compose 实现，四格底栏与红白主题，支持任务返图、排班排休、效期扫码（CameraX + ML Kit）与通知轮询。</p>
+        <ul class="tags"><li>Kotlin</li><li>Compose</li><li>CameraX</li><li>minSdk 26</li></ul>
+        <span class="go">进入 android/ →</span>
+      </a>
+
+      <a class="card" href="ios/" id="ios">
+        <span class="mono">i</span>
+        <h3>iOS 原生端</h3>
+        <p>SwiftUI 实现，最低 iOS 15；AVFoundation + Vision 扫码，Keychain 保存 Token，本地通知 + 周期拉取，APNs 接入点已预留。</p>
+        <ul class="tags"><li>SwiftUI</li><li>iOS 15+</li><li>Vision</li><li>未签名 ipa</li></ul>
+        <span class="go">进入 ios/ →</span>
+      </a>
+    </div>
+
+    <div class="note">
+      <span class="dot"></span>
+      <span>网页端需要 PHP + MySQL 环境，GitHub Pages 只负责展示本导航页，不会执行 PHP。原生端为员工端，管理后台仅在网页端提供。</span>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>维护人 <a href="https://github.com/Yelik05">Yelik05</a> · 源码按现状提供，不含真实数据与凭据</span>
+    <span><a href="https://github.com/Yelik05/store-staff">GitHub 仓库</a></span>
+  </div>
+</footer>
+</body>
+</html>

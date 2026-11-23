@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Android 原生工程 · 门店人员管理系统</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{--brand:#E10600;--bg:#F6F4F0;--surface:#fff;--text:#1A1613;--muted:#6C655E;--line:#E5E0D8;color-scheme:light}
+  @media (prefers-color-scheme: dark){:root{--brand:#FF4B3E;--bg:#0F0F0F;--surface:#191816;--text:#F4F0EA;--muted:#A79F96;--line:#2C2925;color-scheme:dark}}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.65;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{width:100%;max-width:640px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:34px}
+  .mono{width:46px;height:46px;border-radius:13px;background:rgba(225,6,0,.12);color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;margin-bottom:16px}
+  h1{margin:0 0 10px;font-size:26px;letter-spacing:-.02em}
+  p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
+  .tags{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:16px 0 24px}
+  .tags li{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border:1px solid var(--line);padding:3px 10px;border-radius:999px}
+  .actions{display:flex;flex-wrap:wrap;gap:10px}
+  a.btn{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none}
+  .primary{background:var(--brand);color:#fff}
+  .ghost{border:1px solid var(--line);color:var(--text)}
+  .back{display:inline-block;margin-top:22px;font-size:13px;color:var(--muted);text-decoration:none}
+  .back:hover{color:var(--brand)}
+</style>
+</head>
+<body>
+  <main class="box">
+    <div class="mono">A</div>
+    <h1>Android 原生工程</h1>
+    <p>塔斯汀门店助手员工端：Kotlin + Jetpack Compose，minSdk 26，CameraX + ML Kit 扫码，WorkManager 通知轮询。</p>
+    <ul class="tags"><li>Kotlin 2.0</li><li>Compose BOM 2024.10</li><li>AGP 8.7.3</li><li>JDK 17</li></ul>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/Yelik05/store-staff/blob/main/android/README.md">查看工程说明</a>
+      <a class="btn ghost" href="https://github.com/Yelik05/store-staff/tree/main/android">浏览源码</a>
+    </div>
+    <a class="back" href="../">← 返回三端总页</a>
+  </main>
+</body>
+</html>

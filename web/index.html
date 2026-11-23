@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#E10600">
+<script>(function(){try{var m=localStorage.getItem('ts_theme')||'auto';var d=m==='dark'||(m==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-mode',m);document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
+<link rel="icon" href="favicon.ico?v=202611308" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon/favicon-32.png?v=202611308">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon/favicon-192.png?v=202611308">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/img/favicon/favicon-512.png?v=202611308">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon/apple-touch-icon-180.png?v=202611308">
+<title>塔斯汀门店人员管理系统</title>
+<link rel="stylesheet" href="assets/css/theme.css?v=202611308">
+<link rel="stylesheet" href="assets/css/base.css?v=202611308">
+<script src="assets/js/site-title.js?v=202611308"></script>
+</head>
+<body class="staff-theme">
+<div class="center-page">
+  <div class="state-box">
+    <div class="state-icon" style="font-weight:700;font-size:22px;background:var(--brand);color:#fff;">塔</div>
+    <h3 class="state-title">塔斯汀门店人员管理系统</h3>
+    <p class="state-desc">正在进入系统…</p>
+  </div>
+</div>
+<script src="assets/js/util.js?v=202611308"></script>
+<script src="assets/js/validate.js?v=202611308"></script>
+<script src="assets/js/theme.js?v=202611308"></script>
+<script src="assets/js/store.js?v=202611308"></script>
+<script src="assets/js/api.js?v=202611308"></script>
+<script>
+  (function () {
+    api.bootstrap().then(function (d) {
+      Store.bootstrap(d);
+      Auth.setSession(d.session);
+      location.replace(d.session ? Auth.home() : Auth.loginPage());
+    }).catch(function (e) {
+      location.replace(e && e.code === 'INSTALL_REQUIRED' ? 'install.php' : Auth.loginPage());
+    });
+  })();
+</script>
+<script src="assets/js/zoom-lock.js?v=202611308"></script>
+<div class="site-support" style="position:fixed;left:0;right:0;bottom:0;">系统支持 <a href="landing/index.html">塔斯汀门店助手</a></div>
+</body>
+</html>

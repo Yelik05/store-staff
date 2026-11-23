@@ -1,0 +1,191 @@
+/* theme.css — 秩序红 · TASTIN 视觉系统 04
+   纸白主场 / 红色信号 / 细线分层 / 等宽数字 / 宋体标题
+   变量按旧名兼容，页面与脚本无需改动。 */
+:root {
+  /* 面 */
+  --paper: #F5F4F2;
+  --surface: #FFFFFF;
+  --surface-2: #FAF9F7;
+  --surface-3: #F0EEE9;
+  --band: #EFEDE8;
+  --band-2: #F8F7F3;
+  --pattern: rgba(18, 18, 18, .045);
+  --pattern-strong: rgba(18, 18, 18, .075);
+
+  /* 墨 */
+  --ink: #121212;
+  --ink-2: #3C3C3C;
+  --ink-3: #787878;
+  --ink-4: #A6A6A6;
+
+  /* 线 */
+  --line: #E5E3DF;
+  --line-2: #EFEDEA;
+  --line-strong: #CFCBC4;
+  /* 低对比分隔线：只用于列表行与分区，避免整页细线 */
+  --line-hair: rgba(18, 18, 18, .06);
+
+  /* 红：只做信号与主操作
+     #E10600 对纯白 4.97:1；白字压红底同为 4.97:1（AA 正文）
+     浅底红字用加深一档的 --red-ink（≥5.3:1），按压态用 --red-pressed（白字 6.8:1） */
+  --red: #E10600;
+  --red-solid: #E10600;
+  --red-ink: #BE0400;
+  --red-pressed: #B90500;
+  --red-tint: rgba(225, 6, 0, .06);
+  --red-tint-2: rgba(225, 6, 0, .11);
+  --red-line: rgba(225, 6, 0, .20);
+  --red-focus: rgba(225, 6, 0, .22);
+
+  /* 黄铜：极少量点缀 */
+  --brass: #9A7B4F;
+  --brass-tint: #F1EBE0;
+
+  /* 语义色 */
+  --ok: #1E7A4C;
+  --ok-tint: #E7F2EB;
+  --warn: #8E6209;
+  --warn-tint: #F6EEDD;
+  --info: #2F5F8A;
+  --info-tint: #E8EEF4;
+  --bad: #B3261E;
+  --bad-tint: #F8E7E5;
+
+  /* 字号 / 字体 */
+  --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", Georgia, serif;
+  --sans: "MiSans", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", Consolas, "Courier New", monospace;
+
+  /* 圆角档位：卡片 16 / 按钮·输入 12 / 标签 6 / 弹层 20 / 胶囊 999 */
+  --r-card: 16px;
+  --r-btn: 12px;
+  --r-input: 12px;
+  --r-badge: 6px;
+  --r-pop: 14px;
+  --r-sheet: 20px;
+  --r-pill: 999px;
+  --radius: var(--r-card);
+  --radius-sm: var(--r-btn);
+  --radius-lg: var(--r-card);
+
+  /* 阴影：低对比、大扩散、无硬边，取代描边做层次 */
+  --shadow-card: 0 10px 28px -18px rgba(18, 18, 18, .10), 0 32px 70px -46px rgba(18, 18, 18, .10);
+  --shadow-card-hover: 0 16px 38px -22px rgba(18, 18, 18, .14), 0 44px 88px -56px rgba(18, 18, 18, .12);
+  --shadow-row: 0 8px 20px -16px rgba(18, 18, 18, .10);
+  --shadow-pop: 0 18px 44px -24px rgba(18, 18, 18, .22), 0 6px 18px -12px rgba(18, 18, 18, .10);
+  --shadow-sheet: 0 30px 80px -36px rgba(18, 18, 18, .26), 0 10px 30px -20px rgba(18, 18, 18, .12);
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-pop);
+  --shadow-modal: var(--shadow-sheet);
+  --shadow-lg: var(--shadow-sheet);
+
+  /* 旧变量名兼容 */
+  --brand: var(--red);
+  --brand-dark: var(--red-pressed);
+  --brand-soft: var(--red-tint);
+  --brand-soft-2: var(--red-tint-2);
+  --gold: var(--brass);
+  --gold-soft: var(--brass-tint);
+  --gold-ink: var(--brass);
+  --kraft: var(--brass);
+  --kraft-soft: var(--brass-tint);
+
+  --bg: var(--paper);
+  --white: var(--surface);
+  --card: var(--surface);
+  --card-2: var(--surface-2);
+  --topbar: rgba(245, 244, 242, .92);
+  --scrim: rgba(18, 18, 18, .42);
+
+  --success: var(--ok);
+  --success-soft: var(--ok-tint);
+  --warn-soft: var(--warn-tint);
+  --danger: var(--bad);
+  --danger-soft: var(--bad-tint);
+  --info-soft: var(--info-tint);
+
+  --font: var(--sans);
+  --font-serif: var(--serif);
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --paper: #0F0F0F;
+  --surface: #181818;
+  --surface-2: #1F1F1F;
+  --surface-3: #232322;
+  --band: #131313;
+  --band-2: #1A1918;
+  --pattern: rgba(255, 255, 255, .045);
+  --pattern-strong: rgba(255, 255, 255, .08);
+
+  --ink: #F2F1EF;
+  --ink-2: #C7C5C1;
+  --ink-3: #8C8A86;
+  --ink-4: #63615D;
+
+  --line: #2A2A2A;
+  --line-2: #242424;
+  --line-strong: #3C3C3C;
+  --line-hair: rgba(255, 255, 255, .07);
+
+  /* 深色：文字红提亮到 #FF6B5E（对 #181818 约 6.4:1）；红底仍用 #E10600，白字 4.97:1 */
+  --red: #FF6B5E;
+  --red-solid: #E10600;
+  --red-ink: #FF8A7E;
+  --red-pressed: #B90500;
+  --red-tint: rgba(255, 107, 94, .12);
+  --red-tint-2: rgba(255, 107, 94, .18);
+  --red-line: rgba(255, 107, 94, .26);
+  --red-focus: rgba(255, 107, 94, .30);
+
+  --brass: #D2AE78;
+  --brass-tint: #282218;
+
+  --ok: #6FBF8E;
+  --ok-tint: rgba(111, 191, 142, .12);
+  --warn: #D9A44B;
+  --warn-tint: rgba(217, 164, 75, .12);
+  --info: #8AB4D8;
+  --info-tint: rgba(138, 180, 216, .12);
+  --bad: #F07B70;
+  --bad-tint: rgba(240, 123, 112, .12);
+
+  --brand: var(--red);
+  --brand-dark: var(--red-ink);
+  --brand-soft: var(--red-tint);
+  --brand-soft-2: var(--red-tint-2);
+  --gold: var(--brass);
+  --gold-soft: var(--brass-tint);
+  --gold-ink: var(--brass);
+  --kraft: var(--brass);
+  --kraft-soft: var(--brass-tint);
+
+  --bg: var(--paper);
+  --white: var(--surface);
+  --card: var(--surface);
+  --card-2: var(--surface-2);
+  --topbar: rgba(15, 15, 15, .92);
+  --scrim: rgba(0, 0, 0, .62);
+
+  --success: var(--ok);
+  --success-soft: var(--ok-tint);
+  --warn-soft: var(--warn-tint);
+  --danger: var(--bad);
+  --danger-soft: var(--bad-tint);
+  --info-soft: var(--info-tint);
+
+  --shadow-card: 0 12px 30px -18px rgba(0, 0, 0, .58), 0 36px 80px -48px rgba(0, 0, 0, .48);
+  --shadow-card-hover: 0 18px 42px -22px rgba(0, 0, 0, .68), 0 48px 96px -58px rgba(0, 0, 0, .52);
+  --shadow-row: 0 8px 20px -14px rgba(0, 0, 0, .6);
+  --shadow-pop: 0 18px 44px -22px rgba(0, 0, 0, .7), 0 6px 18px -10px rgba(0, 0, 0, .5);
+  --shadow-sheet: 0 32px 84px -34px rgba(0, 0, 0, .72), 0 12px 32px -18px rgba(0, 0, 0, .55);
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-pop);
+  --shadow-modal: var(--shadow-sheet);
+  --shadow-lg: var(--shadow-sheet);
+
+  color-scheme: dark;
+}

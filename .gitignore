@@ -1,0 +1,27 @@
+# 忽略真实配置与敏感文件
+config.php
+.env
+*.log
+uploads/
+
+# 构建产物与缓存
+build/
+.gradle/
+.kotlin/
+DerivedData/
+node_modules/
+*.ipa
+*.xcarchive
+
+# 本机与签名文件
+local.properties
+*.jks
+*.keystore
+*.p12
+
+# 系统 / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.xcuserstate
+xcuserdata/

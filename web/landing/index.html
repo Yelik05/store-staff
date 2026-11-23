@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>塔斯汀门店人员管理系统 · 三端一体的门店协作平台</title>
+<meta name="description" content="面向门店的员工与排班管理系统：任务闭环、效期管理、排班排休、考勤工时、量化分、报销、通讯录与私信。网页版 + 安卓 App + iOS App，PHP + MySQL 私有部署。">
+<link rel="icon" href="data:,">
+<script>
+(function(){
+  var mode = 'system';
+  try { mode = localStorage.getItem('landing-theme') || 'system'; } catch(e){}
+  var dark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var root = document.documentElement;
+  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  root.style.colorScheme = dark ? 'dark' : 'light';
+})();
+</script>
+<style>
+  :root{
+    --brand:#E10600;
+    --brand-ink:#B90500;
+    --brand-soft:#FDECEA;
+    --bg:#F6F4F0;
+    --bg-2:#EFECE6;
+    --surface:#FFFFFF;
+    --surface-2:#FBF9F6;
+    --text:#1A1613;
+    --muted:#6C655E;
+    --line:#E5E0D8;
+    --line-strong:#D6CFC4;
+    --ok:#1F7A4D;
+    --ok-soft:#E7F2EB;
+    --warn:#9A6100;
+    --warn-soft:#FBF1DC;
+    --shadow:0 18px 50px rgba(38,24,12,.10);
+    --shadow-sm:0 6px 18px rgba(38,24,12,.07);
+    --radius:20px;
+    --max:1160px;
+    --header-h:64px;
+    color-scheme:light;
+  }
+  html[data-theme="dark"]{
+    --brand:#FF4B3E;
+    --brand-ink:#FF6B5E;
+    --brand-soft:rgba(225,6,0,.16);
+    --bg:#0F0F0F;
+    --bg-2:#151412;
+    --surface:#191816;
+    --surface-2:#211F1C;
+    --text:#F4F0EA;
+    --muted:#A79F96;
+    --line:#2C2925;
+    --line-strong:#3A352F;
+    --ok:#6FD3A0;
+    --ok-soft:rgba(52,168,110,.16);
+    --warn:#E8B45C;
+    --warn-soft:rgba(190,130,20,.18);
+    --shadow:0 22px 60px rgba(0,0,0,.55);
+    --shadow-sm:0 8px 22px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+    font-size:16px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  img{max-width:100%;display:block}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit}
+  ::selection{background:var(--brand);color:#fff}
+  .wrap{width:100%;max-width:var(--max);margin:0 auto;padding:0 20px}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--brand);font-weight:700;
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;background:var(--brand);border-radius:2px}
+  h1,h2,h3{margin:0;line-height:1.18;letter-spacing:-.02em;font-weight:800}
+  h1{font-size:clamp(34px,4.3vw,54px)}
+  h2{font-size:clamp(26px,3.6vw,40px)}
+  h3{font-size:18px;letter-spacing:0}
+  p{margin:0}
+  .muted{color:var(--muted)}
+  .section{padding:clamp(56px,8vw,100px) 0}
+  .section-head{max-width:720px;margin-bottom:clamp(28px,4vw,44px)}
+  .section-head h2{margin:12px 0 14px}
+  .section-head p{color:var(--muted);font-size:clamp(15px,1.6vw,17px)}
+
+  /* ---------- 顶栏 ---------- */
+  .site-header{
+    position:sticky;top:0;z-index:50;
+    background:color-mix(in srgb,var(--bg) 82%,transparent);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-inner{height:var(--header-h);display:flex;align-items:center;gap:16px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-name{font-weight:800;font-size:15px;white-space:nowrap}
+  .brand-sub{display:block;font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+  .nav{display:flex;align-items:center;gap:22px;margin-left:auto}
+  .nav a{font-size:14px;color:var(--muted);font-weight:600;padding:6px 0;border-bottom:2px solid transparent;transition:color .18s,border-color .18s}
+  .nav a:hover{color:var(--text);border-color:var(--brand)}
+  .header-actions{display:flex;align-items:center;gap:8px;margin-left:4px}
+  .icon-btn{
+    width:38px;height:38px;border-radius:11px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:transform .18s,border-color .18s;
+  }
+  .icon-btn:hover{transform:translateY(-1px);border-color:var(--line-strong)}
+  .icon-btn svg{width:18px;height:18px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    height:46px;padding:0 22px;border-radius:12px;
+    font-weight:700;font-size:15px;cursor:pointer;border:1px solid transparent;
+    transition:transform .18s,box-shadow .18s,background .18s;
+    white-space:nowrap;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn-primary{background:var(--brand);color:#fff;box-shadow:0 10px 24px rgba(225,6,0,.28)}
+  .btn-primary:hover{background:var(--brand-ink)}
+  .btn-ghost{background:var(--surface);border-color:var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--line-strong)}
+  .btn-sm{height:38px;padding:0 16px;font-size:13px;border-radius:10px}
+
+  /* ---------- 首屏 ---------- */
+  .hero{position:relative;overflow:hidden;padding:clamp(38px,6vw,72px) 0 clamp(36px,6vw,76px)}
+  .hero::before{
+    content:"";position:absolute;inset:-20% -10% auto auto;width:560px;height:560px;
+    background:radial-gradient(circle at center,rgba(225,6,0,.16),transparent 62%);
+    pointer-events:none;
+  }
+  .hero::after{
+    content:"";position:absolute;inset:auto auto -30% -10%;width:460px;height:460px;
+    background:radial-gradient(circle at center,rgba(225,6,0,.08),transparent 65%);
+    pointer-events:none;
+  }
+  .hero-grid{position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,64px);align-items:center}
+  .hero-copy h1{margin:16px 0 18px}
+  .hero-copy h1 em{font-style:normal;color:var(--brand)}
+  .hero-lead{color:var(--muted);font-size:clamp(15px,1.8vw,18px);max-width:560px}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    height:32px;padding:0 12px;border-radius:999px;
+    border:1px solid var(--line);background:var(--surface);
+    font-size:12.5px;font-weight:600;color:var(--muted);
+  }
+  .chip svg{width:14px;height:14px;color:var(--ok)}
+  .hero-visual{position:relative;min-width:0}
+  .phones{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:end}
+  .phone{
+    margin:0;border-radius:26px;overflow:hidden;position:relative;
+    background:var(--surface);border:1px solid var(--line-strong);
+    box-shadow:var(--shadow);
+  }
+  .phone:nth-child(1){transform:translateY(16px) rotate(-2deg)}
+  .phone:nth-child(2){transform:translateY(-6px)}
+  .phone:nth-child(3){transform:translateY(20px) rotate(2deg)}
+  .phone img{width:100%;aspect-ratio:9/19.4;object-fit:cover;object-position:top}
+  .phone::after{
+    content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:34%;height:9px;border-radius:999px;background:rgba(0,0,0,.55);
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;
+  }
+  .phone-cap{
+    position:absolute;left:8px;bottom:8px;
+    font-size:10px;font-weight:700;letter-spacing:.04em;color:#fff;
+    background:rgba(12,10,9,.62);backdrop-filter:blur(6px);
+    padding:3px 8px;border-radius:999px;
+  }
+
+  /* ---------- 指标条 ---------- */
+  .stats{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden;
+  }
+  .stat{padding:20px 18px;border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
+  .stat b{display:block;font-size:clamp(20px,2.4vw,27px);letter-spacing:-.02em}
+  .stat span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  /* ---------- 能力 ---------- */
+  .grid-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:18px;
+    padding:22px;box-shadow:var(--shadow-sm);
+    display:flex;flex-direction:column;gap:10px;
+    transition:transform .2s,border-color .2s,box-shadow .2s;
+  }
+  .card:hover{transform:translateY(-3px);border-color:var(--line-strong);box-shadow:var(--shadow)}
+  .card-icon{
+    width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:var(--brand-soft);color:var(--brand);
+  }
+  .card-icon svg{width:21px;height:21px}
+  .card p{color:var(--muted);font-size:14px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}
+  .tag{font-size:11.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);padding:2px 8px;border-radius:999px}
+
+  /* ---------- 三端 ---------- */
+  .clients{background:var(--bg-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .client-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .client{
+    background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-sm);
+  }
+  .client-top{display:flex;align-items:center;gap:12px}
+  .client-logo{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--line)}
+  .client-logo svg{width:22px;height:22px}
+  .client h3{font-size:18px}
+  .client .role{font-size:12px;color:var(--muted)}
+  .badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .badge-ok{background:var(--ok-soft);color:var(--ok)}
+  .badge-warn{background:var(--warn-soft);color:var(--warn)}
+  .client ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .client li{display:flex;gap:9px;font-size:13.5px;color:var(--muted)}
+  .client li svg{width:16px;height:16px;flex:none;margin-top:3px;color:var(--ok)}
+  .client li.warn svg{color:var(--warn)}
+  .client li b{color:var(--text);font-weight:600}
+  .diff{
+    margin-top:26px;border:1px solid var(--line);border-radius:18px;background:var(--surface);
+    overflow:hidden;
+  }
+  .diff-row{display:grid;grid-template-columns:1.05fr 1fr 1fr 1fr;border-top:1px solid var(--line)}
+  .diff-row:first-child{border-top:0;background:var(--surface-2)}
+  .diff-row > div{padding:13px 16px;font-size:13px;border-left:1px solid var(--line);min-width:0}
+  .diff-row > div:first-child{border-left:0;font-weight:700;color:var(--text)}
+  .diff-row.head > div{font-size:12px;letter-spacing:.04em;color:var(--muted);font-weight:700}
+  .diff-row > div:not(:first-child){color:var(--muted)}
+  .diff-note{font-size:12px;color:var(--muted);margin-top:10px}
+
+  /* ---------- 部署 ---------- */
+  .deploy-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(24px,4vw,52px);align-items:start}
+  .steps{display:flex;flex-direction:column;gap:6px;counter-reset:step}
+  .step{display:grid;grid-template-columns:40px 1fr;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line)}
+  .step:last-child{border-bottom:0}
+  .step-num{
+    width:34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;
+  }
+  .step h3{font-size:15.5px;margin-bottom:3px}
+  .step p{font-size:13.5px;color:var(--muted)}
+  .req-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow-sm)}
+  .req-card h3{margin-bottom:12px}
+  .req-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .req-list li{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;border-bottom:1px solid var(--line);padding-bottom:9px}
+  .req-list li:last-child{border-bottom:0;padding-bottom:0}
+  .req-list span{color:var(--muted)}
+  .code{
+    margin-top:16px;background:#141210;color:#EAE4DC;border-radius:12px;padding:14px 16px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;
+    overflow-x:auto;
+  }
+  .code .k{color:#FF8A7E}
+  .code .s{color:#9ED3A8}
+  .deploy-note{font-size:12.5px;color:var(--muted);margin-top:12px}
+
+  /* ---------- FAQ ---------- */
+  details.faq{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 18px;margin-bottom:10px}
+  details.faq summary{cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;justify-content:space-between;gap:14px}
+  details.faq summary::-webkit-details-marker{display:none}
+  details.faq summary::after{content:"+";color:var(--brand);font-size:20px;line-height:1;font-weight:600}
+  details.faq[open] summary::after{content:"–"}
+  details.faq p{color:var(--muted);font-size:14px;margin-top:10px}
+
+  /* ---------- CTA / 页脚 ---------- */
+  .cta{
+    position:relative;overflow:hidden;border-radius:24px;
+    background:linear-gradient(135deg,#1B1614 0%,#2A1C18 55%,#3A1714 100%);
+    color:#fff;padding:clamp(30px,5vw,56px);
+    display:grid;grid-template-columns:1.2fr .8fr;gap:26px;align-items:center;
+    box-shadow:var(--shadow);
+  }
+  .cta::after{
+    content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;
+    background:radial-gradient(circle,rgba(225,6,0,.55),transparent 65%);
+  }
+  .cta h2{color:#fff;font-size:clamp(26px,3.6vw,38px)}
+  .cta p{color:rgba(255,255,255,.72);margin-top:10px;font-size:14.5px}
+  .cta-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;position:relative;z-index:1}
+  .btn-light{background:#fff;color:#1A1613}
+  .btn-outline-light{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.3);color:#fff}
+  footer{padding:34px 0 46px;color:var(--muted);font-size:13px}
+  .foot-inner{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;justify-content:space-between}
+  .foot-links{display:flex;flex-wrap:wrap;gap:16px}
+  .foot-links a:hover{color:var(--brand)}
+  .foot-brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:700}
+  .foot-legal{
+    margin-top:24px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:11.5px;line-height:1.85;color:var(--muted);text-align:center;
+  }
+  .foot-legal p{max-width:780px;margin:0 auto 5px}
+  .foot-legal p:last-child{margin-bottom:0}
+  .foot-support{font-size:11.5px;color:var(--muted)}
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width:1020px){
+    .hero-grid{grid-template-columns:1fr;gap:38px}
+    .hero-copy{max-width:680px}
+    .hero-visual{max-width:620px;margin:0 auto;width:100%}
+    .grid-cards{grid-template-columns:repeat(2,1fr)}
+    .client-grid{grid-template-columns:1fr}
+    .deploy-grid{grid-template-columns:1fr}
+    .cta{grid-template-columns:1fr}
+    .cta-actions{justify-content:flex-start}
+    .nav{display:none}
+    .header-actions{margin-left:auto}
+  }
+  @media (max-width:760px){
+    .wrap{padding:0 16px}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .stat{border-bottom:1px solid var(--line)}
+    .stat:nth-child(3),.stat:nth-child(4){border-bottom:0}
+    .stat:nth-child(2){border-right:0}
+    .stat:nth-child(4){border-right:0}
+    .grid-cards{grid-template-columns:1fr}
+    .phones{grid-template-columns:repeat(2,1fr);gap:10px}
+    .phone:nth-child(3){display:none}
+    .phone:nth-child(1){transform:translateY(10px) rotate(-1.5deg)}
+    .phone:nth-child(2){transform:none}
+    .diff-row{grid-template-columns:1fr}
+    .diff-row > div{padding:7px 14px;font-size:13px;border-left:0}
+    .diff-row.head{display:none}
+    .diff-row > div:first-child{background:var(--surface-2);border-top:1px solid var(--line);padding:11px 14px 6px;font-weight:700;color:var(--text)}
+    .diff-row > div:nth-child(2),.diff-row > div:nth-child(3),.diff-row > div:nth-child(4){display:grid;grid-template-columns:64px 1fr;gap:8px}
+    .diff-row > div:nth-child(2)::before{content:"网页版"}
+    .diff-row > div:nth-child(3)::before{content:"安卓 App"}
+    .diff-row > div:nth-child(4)::before{content:"iOS App"}
+    .diff-row > div:nth-child(2)::before,.diff-row > div:nth-child(3)::before,.diff-row > div:nth-child(4)::before{font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.9}
+    .diff-row:last-child > div:last-child{padding-bottom:12px}
+    .hero-cta .btn{flex:1 1 auto}
+    .hero-cta .btn{min-width:0}
+    .brand-sub{display:none}
+  }
+  @media (max-width:390px){
+    .wrap{padding:0 14px}
+    .card{padding:18px}
+    .client{padding:18px}
+    .req-card{padding:18px}
+    .cta{padding:24px}
+    .chip{font-size:12px;padding:0 10px}
+    h1{font-size:31px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#top" aria-label="回到顶部">
+      <span>
+        <span class="brand-name">塔斯汀门店助手</span>
+        <span class="brand-sub">门店人员管理系统</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#capability">核心能力</a>
+      <a href="#clients">三端说明</a>
+      <a href="#deploy">部署接入</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="切换主题：跟随系统" title="跟随系统">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- 首屏 -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">门店人员管理系统</span>
+        <h1>把门店的人、事、期效<br><em>放进同一个系统</em></h1>
+        <p class="hero-lead">排班、任务、效期、考勤、量化分、报销、通讯录与日程，员工在手机上一站式完成；管理后台在网页端统一配置。三端同一套数据，私有部署在自有服务器。</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#capability">
+            查看核心能力
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#clients">查看三端差异</a>
+        </div>
+        <div class="hero-meta">
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>网页版 / 安卓 / iOS 三端</span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>PHP + MySQL 私有部署</span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>安装向导开箱可用</span>
+        </div>
+      </div>
+      <div class="hero-visual" aria-label="应用实机截图">
+        <div class="phones">
+          <figure class="phone">
+            <img src="assets/shots/home.jpg" alt="员工端首页：今日排班与待办任务" loading="eager">
+            <figcaption class="phone-cap">首页 · 今日排班</figcaption>
+          </figure>
+          <figure class="phone">
+            <img src="assets/shots/expiry.jpg" alt="效期检查页：分类物料与到期时间" loading="eager">
+            <figcaption class="phone-cap">效期检查</figcaption>
+          </figure>
+          <figure class="phone">
+            <img src="assets/shots/attendance.jpg" alt="考勤页：月度出勤与工时汇总" loading="lazy">
+            <figcaption class="phone-cap">考勤与工时</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 指标 -->
+  <section class="wrap" aria-label="系统概览">
+    <div class="stats">
+      <div class="stat"><b>3 端</b><span>网页版 · 安卓 · iOS</span></div>
+      <div class="stat"><b>8 项</b><span>核心能力模块</span></div>
+      <div class="stat"><b>PHP 7.4+</b><span>MySQL 5.7+ / 8.0</span></div>
+      <div class="stat"><b>私有化</b><span>数据在自有服务器</span></div>
+    </div>
+  </section>
+
+  <!-- 核心能力 -->
+  <section class="section" id="capability">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">核心能力</span>
+        <h2>从上班第一件事，到每月结算</h2>
+        <p>以下能力均已在系统内上线，员工端与网页版共用同一套接口与数据口径。</p>
+      </div>
+      <div class="grid-cards">
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18M8 14h3"/></svg></div>
+          <h3>今日排班与排休</h3>
+          <p>首页直接看到今天的班次、岗位与低峰任务；全职提交排休、兼职提交排班申请，审批进度实时可见。</p>
+          <div class="tags"><span class="tag">班次</span><span class="tag">排休</span><span class="tag">审批进度</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
+          <h3>任务闭环</h3>
+          <p>日 / 周 / 月 / 次任务模板，支持拍照返图、两种完成方式与二次确认、改派、管理岗代完成，逾期与已完成独立归档。</p>
+          <div class="tags"><span class="tag">任务模板</span><span class="tag">返图</span><span class="tag">逾期归档</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/><path d="M17 15l2 2 3-3"/></svg></div>
+          <h3>效期管理</h3>
+          <p>按分类登记原物料到期时间，效期检查、当天到期、效期总览三个视图；支持扫码识别、过期报废二次确认，同一物料同一天覆盖更新。</p>
+          <div class="tags"><span class="tag">扫码</span><span class="tag">当天到期</span><span class="tag">总览标色</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>考勤与工时</h3>
+          <p>按月汇总出勤天数、总工时与异常次数，按天展开班段计划、实际打卡与确认状态，异常一目了然。</p>
+          <div class="tags"><span class="tag">月度汇总</span><span class="tag">班段明细</span><span class="tag">异常</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+          <h3>报销申请</h3>
+          <p>按分类提交金额与事由，上传凭证附件（最多 5 个、单个 10MB），选择收款方式，随时查看审批状态与驳回原因。</p>
+          <div class="tags"><span class="tag">附件上传</span><span class="tag">审批状态</span><span class="tag">驳回原因</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h4M19 6v4"/></svg></div>
+          <h3>通讯录与私信</h3>
+          <p>门店同事按姓名、岗位、手机号、工号搜索，一键拨号或直接发起私信；消息页区分系统通知、任务与私信三类未读。</p>
+          <div class="tags"><span class="tag">门店通讯录</span><span class="tag">私信</span><span class="tag">未读角标</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h3M8 17h3"/></svg></div>
+          <h3>日程安排</h3>
+          <p>个人日程与门店日程分开查看，按今天 / 未来 / 过去分组；本人可新建、编辑、删除并设置提醒。</p>
+          <div class="tags"><span class="tag">个人 / 门店</span><span class="tag">提醒</span><span class="tag">分组</span></div>
+        </article>
+        <article class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 14h3M7 17h6"/></svg></div>
+          <h3>管理后台</h3>
+          <p>网页端统一管理员工、任务模板、排班与排休、效期配置、考勤、量化分、报销、公告与系统设置。</p>
+          <div class="tags"><span class="tag">仅网页版</span><span class="tag">角色权限</span><span class="tag">门店配置</span></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 三端 -->
+  <section class="section clients" id="clients">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">三端说明</span>
+        <h2>同一套数据，三种使用方式</h2>
+        <p>员工端三端能力对齐；管理后台只在网页版提供。安装方式与通知能力存在差异，下面按实际情况说明。</p>
+      </div>
+      <div class="client-grid">
+        <article class="client">
+          <div class="client-top">
+            <div class="client-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+            <div><h3>网页版</h3><span class="role">员工端 + 管理后台</span></div>
+          </div>
+          <span class="badge badge-ok">浏览器即用 · 无需安装</span>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>员工端：</b>任务、排班、效期、消息、考勤、报销等全部页面</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>管理后台：</b>仅网页版提供，店员端 App 不包含管理功能</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>消息：</b>站内未读角标与消息列表</span></li>
+            <li class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span><b>提醒：</b>不弹系统通知；效期扫码需 HTTPS 且浏览器支持摄像头</span></li>
+          </ul>
+        </article>
+        <article class="client">
+          <div class="client-top">
+            <div class="client-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 18h2"/></svg></div>
+            <div><h3>安卓 App</h3><span class="role">原生 Kotlin · Jetpack Compose</span></div>
+          </div>
+          <span class="badge badge-ok">APK 直接安装 · 本地通知</span>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>形态：</b>原生应用，直接调用 PHP 接口，不内嵌网页</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>安装：</b>安装 APK 即可，需允许“安装未知来源应用”</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>通知：</b>本地通知；前台每 5 分钟拉取，后台 WorkManager 约 30 分钟兜底</span></li>
+            <li class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span><b>限制：</b>仅员工端；FCM 远程推送为预留能力，需自行配置服务端</span></li>
+          </ul>
+        </article>
+        <article class="client">
+          <div class="client-top">
+            <div class="client-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 18h2"/><path d="M17.5 8.5c.8.8.8 2.2 0 3"/></svg></div>
+            <div><h3>iOS App</h3><span class="role">原生 SwiftUI · iOS 15+</span></div>
+          </div>
+          <span class="badge badge-warn">未签名 IPA · 需自签安装</span>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>形态：</b>原生应用，直接调用 PHP 接口，不加载网页</span></li>
+            <li class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span><b>安装：</b>Sideloadly / AltStore 用 Apple ID 自签；免费账号 <b>7 天有效、最多 3 个 App</b>，到期需重新签名</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>通知：</b>本地通知；前台 5 分钟轮询，后台刷新约 30 分钟（系统调度不保证准时）</span></li>
+            <li class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span><b>推送：</b>APNs 默认关闭；系统级远程推送需 Apple Developer Program（付费）并配置 Push Notifications</span></li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="diff" role="table" aria-label="三端能力差异">
+        <div class="diff-row head" role="row"><div role="columnheader">对比项</div><div role="columnheader">网页版</div><div role="columnheader">安卓 App</div><div role="columnheader">iOS App</div></div>
+        <div class="diff-row" role="row"><div role="cell">管理后台</div><div role="cell">支持</div><div role="cell">不提供</div><div role="cell">不提供</div></div>
+        <div class="diff-row" role="row"><div role="cell">安装方式</div><div role="cell">浏览器访问</div><div role="cell">APK 安装</div><div role="cell">IPA 自签安装</div></div>
+        <div class="diff-row" role="row"><div role="cell">系统通知</div><div role="cell">站内未读</div><div role="cell">本地通知</div><div role="cell">本地通知</div></div>
+        <div class="diff-row" role="row"><div role="cell">远程推送</div><div role="cell">无</div><div role="cell">FCM 预留</div><div role="cell">APNs 需付费账号</div></div>
+        <div class="diff-row" role="row"><div role="cell">有效期</div><div role="cell">随服务</div><div role="cell">长期可用</div><div role="cell">免费自签 7 天</div></div>
+        <div class="diff-row" role="row"><div role="cell">效期扫码</div><div role="cell">浏览器摄像头</div><div role="cell">原生相机</div><div role="cell">原生相机</div></div>
+      </div>
+      <p class="diff-note">管理后台与员工端共用同一套账号与数据；三端功能以系统实际版本为准。</p>
+    </div>
+  </section>
+
+  <!-- 部署 -->
+  <section class="section" id="deploy">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">部署与接入</span>
+        <h2>上传到虚拟主机，跟着向导完成安装</h2>
+        <p>系统为 PHP + MySQL 架构，不依赖 Composer 或额外服务，可直接放在虚拟主机的子目录中运行。</p>
+      </div>
+      <div class="deploy-grid">
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div><h3>上传程序到子目录</h3><p>将网页端文件上传到虚拟主机的目标目录，例如 <code>/staff/</code>，保持目录结构不变。</p></div></div>
+          <div class="step"><div class="step-num">2</div><div><h3>访问安装向导</h3><p>浏览器打开 <code>https://你的域名/staff/install.php</code>，向导会先检查 PHP 版本、PDO 与 PDO MySQL 扩展。</p></div></div>
+          <div class="step"><div class="step-num">3</div><div><h3>填写数据库信息</h3><p>输入主机提供的 MySQL 地址、库名、账号与密码；向导自动建库、执行建表脚本并写入初始配置。</p></div></div>
+          <div class="step"><div class="step-num">4</div><div><h3>创建店长账号并登录</h3><p>设置管理员手机号与密码，完成后即可登录网页版；员工账号由管理后台创建并分配门店与岗位。</p></div></div>
+          <div class="step"><div class="step-num">5</div><div><h3>打包 App 指向你的域名</h3><p>在安卓 / iOS 工程的配置文件里把站点地址改成你的域名，重新打包 APK / IPA；App 只调用接口，不内置网页资源。</p></div></div>
+        </div>
+        <aside class="req-card">
+          <h3>环境要求</h3>
+          <ul class="req-list">
+            <li><span>PHP</span><b>7.4 及以上</b></li>
+            <li><span>数据库</span><b>MySQL 5.7+ / 8.0</b></li>
+            <li><span>必需扩展</span><b>PDO、PDO MySQL</b></li>
+            <li><span>可选扩展</span><b>Fileinfo</b></li>
+            <li><span>依赖管理</span><b>无需 Composer</b></li>
+            <li><span>协议</span><b>建议启用 HTTPS</b></li>
+          </ul>
+          <pre class="code"><span class="k">'db'</span> =&gt; [
+  <span class="k">'host'</span> =&gt; <span class="s">'localhost'</span>,
+  <span class="k">'port'</span> =&gt; <span class="s">3306</span>,
+  <span class="k">'name'</span> =&gt; <span class="s">'store_staff'</span>,
+  <span class="k">'user'</span> =&gt; <span class="s">'数据库账号'</span>,
+  <span class="k">'pass'</span> =&gt; <span class="s">'数据库密码'</span>,
+  <span class="k">'charset'</span> =&gt; <span class="s">'utf8mb4'</span>,
+];</pre>
+          <p class="deploy-note">安装向导会自动生成配置；如手动迁移，可参考 config.sample.php。Fileinfo 缺失时上传校验会自动降级为文件头检测。</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">常见问题</span>
+        <h2>上线前需要知道的几件事</h2>
+      </div>
+      <details class="faq">
+        <summary>三端的数据是同一套吗？</summary>
+        <p>是。网页版、安卓 App、iOS App 都直接调用同一套 PHP 接口，任务、排班、效期、考勤等数据实时一致；员工在任一端的操作，其他端刷新后即可看到。</p>
+      </details>
+      <details class="faq">
+        <summary>iOS 为什么需要 7 天重新签名？</summary>
+        <p>当前 iOS 包以未签名 IPA 交付，使用免费 Apple ID 通过 Sideloadly 或 AltStore 自签安装。免费账号的签名有效期为 7 天、最多同时安装 3 个 App，到期后需要重新签名；AltStore 可在同一 Wi-Fi 下自动续签。若需长期有效或上架，需要 Apple Developer Program 付费账号。</p>
+      </details>
+      <details class="faq">
+        <summary>为什么 iOS 收不到后台推送？</summary>
+        <p>系统级远程推送（APNs）需要付费开发者账号与 Push Notifications 权限，当前默认关闭。已内置的是本地通知：前台每 5 分钟拉取一次，后台由系统刷新任务约 30 分钟兜底，调度时间由 iOS 决定，不保证准点。</p>
+      </details>
+      <details class="faq">
+        <summary>管理后台可以在 App 里用吗？</summary>
+        <p>不可以。管理后台只在网页版提供；安卓与 iOS App 是员工端，用于日常任务、排班、效期、考勤、报销、通讯录与日程。</p>
+      </details>
+      <details class="faq">
+        <summary>可以装在子目录吗？</summary>
+        <p>可以。把网页端文件放到任意子目录后访问其中的 install.php 完成安装即可；页面与接口均使用相对路径，无需绑定域名根目录。</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap" style="padding-bottom:clamp(40px,6vw,72px)">
+    <div class="cta">
+      <div>
+        <h2>从安装向导开始，把门店日常跑起来</h2>
+        <p>按部署步骤完成网页端安装，再按需打包安卓 APK 与 iOS IPA。数据始终在你们自己的服务器上。</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-light" href="#deploy">查看部署步骤</a>
+        <a class="btn btn-outline-light" href="#clients">三端说明</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div class="foot-brand">塔斯汀门店助手</div>
+    <div class="foot-links">
+      <a href="#capability">核心能力</a>
+      <a href="#clients">三端说明</a>
+      <a href="#deploy">部署接入</a>
+      <a href="#faq">常见问题</a>
+    </div>
+    <span>本页仅介绍系统已上线的真实能力 · 三端功能以实际版本为准</span>
+  </div>
+  <div class="wrap foot-legal">
+    <p>程序开发由 @李承煜（余宗源）进行维护，若有问题可通过飞书联系。</p>
+    <p>程序与 福州塔斯汀餐饮管理有限公司（塔斯汀）无从属关系，页面数据通过塔斯汀 ERP 系统导出后导入至系统后台完成。</p>
+    <p class="foot-support">系统支持 塔斯汀门店助手</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('themeBtn');
+  var icon = document.getElementById('themeIcon');
+  var media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  var SUN = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>';
+  var MOON = '<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"></path>';
+  var AUTO = '<rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path><path d="M7 12l2.5-3L12 12l2.5-3L17 12"></path>';
+
+  function stored(){
+    try { return localStorage.getItem('landing-theme') || 'system'; } catch(e){ return 'system'; }
+  }
+  function systemDark(){ return !!(media && media.matches); }
+  function apply(mode){
+    var dark = mode === 'dark' || (mode === 'system' && systemDark());
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    root.style.colorScheme = dark ? 'dark' : 'light';
+    if (btn){
+      var label = mode === 'system' ? '跟随系统' : (mode === 'dark' ? '深色' : '浅色');
+      btn.setAttribute('aria-label', '切换主题：当前' + label);
+      btn.setAttribute('title', '当前：' + label + '（点击切换）');
+    }
+    if (icon){
+      icon.innerHTML = mode === 'system' ? AUTO : (mode === 'dark' ? MOON : SUN);
+    }
+  }
+  var mode = stored();
+  apply(mode);
+
+  if (btn){
+    btn.addEventListener('click', function(){
+      mode = mode === 'system' ? 'light' : (mode === 'light' ? 'dark' : 'system');
+      try { localStorage.setItem('landing-theme', mode); } catch(e){}
+      apply(mode);
+    });
+  }
+  if (media){
+    var onChange = function(){ if (mode === 'system') apply('system'); };
+    if (media.addEventListener) media.addEventListener('change', onChange);
+    else if (media.addListener) media.addListener(onChange);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# 根目录 Apache 配置（虚拟主机一般已开启 .htaccess）
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(config\.php|config\.sample\.php|schema\.sql|migrate_positions\.sql|migrate_shift\.sql|migrate_notices\.sql|migrate_tasks\.sql|.*\.md)$">
+    Require all denied
+  </FilesMatch>
+  <FilesMatch "^(bootstrap|auth_actions|staff_actions|salary_actions|score_actions|leave_actions|shift_actions|notice_actions|task_actions|public_actions|settings_actions|file_actions|demo|api_routes)\.php$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "^(config\.php|config\.sample\.php|schema\.sql|migrate_positions\.sql|migrate_shift\.sql|migrate_notices\.sql|migrate_tasks\.sql|.*\.md)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+  <FilesMatch "^(bootstrap|auth_actions|staff_actions|salary_actions|score_actions|leave_actions|shift_actions|notice_actions|task_actions|settings_actions|file_actions|demo|api_routes)\.php$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+
+# 防止 MIME 嗅探
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>
