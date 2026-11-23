@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UIKit
 
 // MARK: - 启动状态
 
@@ -193,7 +194,10 @@ struct MainTabView: View {
                     userName: userName,
                     role: role,
                     onBack: { self.overlay = nil },
-                    onLogout: onLogout
+                    onLogout: onLogout,
+                    onAvatarChanged: {
+                        Task { await homeModel.load(refresh: true) }
+                    }
                 )
             }
         } else {
@@ -352,12 +356,17 @@ struct ProfileView: View {
     let role: String
     let onBack: () -> Void
     let onLogout: () -> Void
+    let onAvatarChanged: () -> Void
 
     @State private var notifyEnabled = NotifyPrefs.shared.enabled
     @State private var dndEnabled = NotifyPrefs.shared.dndEnabled
     @State private var showAccountInfo = false
     @State private var showPassword = false
     @State private var showLogoutConfirm = false
+    @State private var avatarKey = SessionStore.shared.avatar
+    @State private var showAvatarPicker = false
+    @State private var avatarBusy = false
+    @State private var avatarError: String?
 
     var body: some View {
         ScrollView {
@@ -377,14 +386,24 @@ struct ProfileView: View {
                 .padding(.top, 4)
 
                 HStack(spacing: 12) {
-                    Circle()
-                        .fill(AppColor.primaryContainer)
-                        .frame(width: 52, height: 52)
-                        .overlay(
-                            Text(String(userName.prefix(1)))
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(AppColor.primary)
-                        )
+                    Group {
+                        if avatarKey.isEmpty {
+                            Circle()
+                                .fill(AppColor.primaryContainer)
+                                .overlay(
+                                    Text(String(userName.prefix(1)))
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(AppColor.primary)
+                                )
+                        } else {
+                            RemoteImage(key: avatarKey, corner: 26, contentMode: .fill)
+                        }
+                    }
+                    .frame(width: 52, height: 52)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(AppColor.outline.opacity(0.7), lineWidth: 0.6))
+                    .onTapGesture { showAvatarPicker = true }
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text(userName.isEmpty ? "门店伙伴" : userName)
                             .font(.ssTitle3)
@@ -397,7 +416,7 @@ struct ProfileView: View {
                 }
 
                 VStack(spacing: 0) {
-                    InfoRow(label: "工号", value: SessionStore.shared.empNo.isEmpty ? "—" : SessionStore.shared.empNo)
+                    InfoRow(label: "工号", value: SessionStore.shared.displayEmpNo.isEmpty ? "—" : SessionStore.shared.displayEmpNo)
                     Divider().background(AppColor.outline)
                     InfoRow(label: "岗位", value: SessionStore.shared.position.isEmpty ? "—" : SessionStore.shared.position)
                     Divider().background(AppColor.outline)
@@ -407,6 +426,8 @@ struct ProfileView: View {
                 .cardSurface()
 
                 VStack(spacing: 0) {
+                    EntryRow(title: "更换头像", subtitle: avatarBusy ? "上传中…" : "从相册选择照片") { showAvatarPicker = true }
+                    Divider().background(AppColor.outline).padding(.leading, 16)
                     EntryRow(title: "账号资料", subtitle: "手机号、工号与本次登录") { showAccountInfo = true }
                     Divider().background(AppColor.outline).padding(.leading, 16)
                     EntryRow(title: "修改密码", subtitle: "6—20 位，需包含字母和数字") { showPassword = true }
@@ -452,11 +473,48 @@ struct ProfileView: View {
         .sheet(isPresented: $showPassword) {
             PasswordSheet(onSuccess: { showPassword = false })
         }
+        .sheet(isPresented: $showAvatarPicker) {
+            PhotoPicker(limit: 1) { images in
+                showAvatarPicker = false
+                guard let image = images.first else { return }
+                Task { await uploadAvatar(image) }
+            }
+        }
         .alert("退出登录", isPresented: $showLogoutConfirm) {
             Button("取消", role: .cancel) {}
             Button("退出", role: .destructive) { onLogout() }
         } message: {
             Text("退出后需要重新输入手机号和密码，确定退出吗？")
+        }
+        .alert("头像更新失败", isPresented: Binding(
+            get: { avatarError != nil },
+            set: { if !$0 { avatarError = nil } }
+        )) {
+            Button("好", role: .cancel) { avatarError = nil }
+        } message: {
+            Text(avatarError ?? "")
+        }
+    }
+
+    private func uploadAvatar(_ image: UIImage) async {
+        guard let data = image.jpegData(compressionQuality: 0.85) else {
+            avatarError = "图片处理失败，请换一张"
+            return
+        }
+        avatarBusy = true
+        defer { avatarBusy = false }
+        do {
+            let key = try await UploadRepository.uploadImage(
+                data: data,
+                filename: "avatar_\(Int(Date().timeIntervalSince1970)).jpg",
+                type: "photo"
+            )
+            try await ProfileRepository.saveAvatar(key: key)
+            SessionStore.shared.setAvatar(key)
+            avatarKey = key
+            onAvatarChanged()
+        } catch {
+            avatarError = ErrText.readable(error)
         }
     }
 }
@@ -545,7 +603,7 @@ private struct AccountInfoSheet: View {
                     let rows: [(String, String)] = [
                         ("姓名", userName),
                         ("手机号", SessionStore.shared.phone.isEmpty ? "—" : SessionStore.shared.phone),
-                        ("飞书工号", SessionStore.shared.empNo.isEmpty ? "待审核" : SessionStore.shared.empNo),
+                        ("飞书工号", SessionStore.shared.displayEmpNo.isEmpty ? "待审核" : SessionStore.shared.displayEmpNo),
                         ("岗位", SessionStore.shared.position.isEmpty ? "—" : SessionStore.shared.position),
                         ("门店", SessionStore.shared.storeName.isEmpty ? "—" : SessionStore.shared.storeName),
                         ("本次登录", SessionStore.shared.lastLoginAt.isEmpty ? "—" : Fmt.dateTime(SessionStore.shared.lastLoginAt))

@@ -364,7 +364,10 @@ enum TaskEntry: Identifiable {
 
 func buildEntries(_ overview: TaskOverview, filter: TaskFilter) -> [TaskEntry] {
     let myId = overview.myStaffId
+    let today = overview.today.isEmpty ? Fmt.today() : overview.today
     let groups = overview.groups.filter { group in
+        // 已完成分组整组隐藏；服务端只返回当前及最近一期，无需按日期硬切。
+        guard !group.done else { return false }
         switch filter {
         case .all:
             return true
@@ -374,12 +377,20 @@ func buildEntries(_ overview: TaskOverview, filter: TaskFilter) -> [TaskEntry] {
             return group.cycle == filter.cycle || group.children.contains { $0.cycle == filter.cycle }
         }
     }
-    let items = overview.items.filter { taskMatches($0, filter: filter, myId: myId) }
+    let items = overview.items.filter { item in
+        // 未到执行日与已完成/已提交的单任务不进入主列表，历史记录走归档。
+        guard item.periodDate <= today, !taskCompleted(item.status) else { return false }
+        return taskMatches(item, filter: filter, myId: myId)
+    }
     let entries = groups.map { TaskEntry.group($0) } + items.map { TaskEntry.item($0) }
     return entries.sorted { left, right in
         if left.periodDate == right.periodDate { return left.title < right.title }
         return left.periodDate > right.periodDate
     }
+}
+
+func taskCompleted(_ status: String) -> Bool {
+    ["approved", "done", "completed", "finished"].contains(status.lowercased())
 }
 
 func taskMatches(_ item: TaskItem, filter: TaskFilter, myId: String) -> Bool {

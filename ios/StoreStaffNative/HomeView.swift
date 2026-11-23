@@ -48,9 +48,9 @@ struct HomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 header
-                    .padding(.top, 12)
+                    .padding(.top, 10)
 
                 if model.loading && model.snapshot == nil {
                     ProgressView()
@@ -87,14 +87,22 @@ struct HomeView: View {
     private var header: some View {
         HStack(spacing: 10) {
             Button(action: onOpenProfile) {
-                Circle()
-                    .fill(AppColor.primaryContainer)
-                    .frame(width: 42, height: 42)
-                    .overlay(
-                        Text(String(displayName.prefix(1)))
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(AppColor.primary)
-                    )
+                Group {
+                    if let key = model.snapshot?.avatar, !key.isEmpty {
+                        RemoteImage(key: key, corner: 21, contentMode: .fill)
+                    } else {
+                        Circle()
+                            .fill(AppColor.primaryContainer)
+                            .overlay(
+                                Text(String(displayName.prefix(1)))
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(AppColor.primary)
+                            )
+                    }
+                }
+                .frame(width: 42, height: 42)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(AppColor.outline.opacity(0.7), lineWidth: 0.6))
             }
             .buttonStyle(.plain)
 

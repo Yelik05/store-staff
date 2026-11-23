@@ -252,6 +252,7 @@ struct MessagesView: View {
     let onBack: () -> Void
 
     @State private var detail: MessageItem?
+    @State private var showAnnouncements = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -288,6 +289,9 @@ struct MessagesView: View {
                 }
             }
         }
+        .sheet(isPresented: $showAnnouncements) {
+            AnnouncementsView()
+        }
     }
 
     private var inbox: some View {
@@ -311,6 +315,20 @@ struct MessagesView: View {
                 .font(.ssTitle3)
                 .foregroundColor(AppColor.text)
             Spacer()
+            Button {
+                showAnnouncements = true
+            } label: {
+                Text("公告")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColor.textSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.badge, style: .continuous)
+                            .stroke(AppColor.outline, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
             if model.scope != .privateThreads {
                 Button {
                     Task { await model.markAllRead() }
@@ -772,4 +790,180 @@ struct GrowingTextView: UIViewRepresentable {
             textView.invalidateIntrinsicContentSize()
         }
     }
+}
+
+// MARK: - 公告
+
+struct AnnouncementsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var items: [NoticeInfo] = []
+    @State private var loading = true
+    @State private var error: String?
+    @State private var detail: NoticeInfo?
+
+    var body: some View {
+        NavigationView {
+            Group {
+                if loading && items.isEmpty {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = error, items.isEmpty {
+                    ErrorStateView(message: error) { Task { await load() } }
+                    Spacer()
+                } else if items.isEmpty {
+                    EmptyStateView(title: "暂无公告", hint: "门店公告发布后会显示在这里。")
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(items) { notice in
+                                Button {
+                                    open(notice)
+                                } label: {
+                                    NoticeRow(notice: notice)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(16)
+                    }
+                }
+            }
+            .background(AppColor.background.ignoresSafeArea())
+            .navigationTitle("门店公告")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
+            .task { if items.isEmpty { await load() } }
+            .sheet(item: $detail) { notice in
+                NoticeDetailSheet(notice: notice)
+            }
+        }
+    }
+
+    private func load() async {
+        loading = true
+        error = nil
+        do {
+            items = try await NoticeRepository.list()
+            loading = false
+        } catch {
+            loading = false
+            self.error = ErrText.readable(error)
+        }
+    }
+
+    private func open(_ notice: NoticeInfo) {
+        detail = notice
+        guard !notice.read else { return }
+        Task {
+            try? await NoticeRepository.markRead(id: notice.id)
+            if let index = items.firstIndex(where: { $0.id == notice.id }) {
+                items[index].read = true
+            }
+        }
+    }
+}
+
+private struct NoticeRow: View {
+    let notice: NoticeInfo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                if notice.pinned {
+                    Text("置顶")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(AppColor.primary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(AppColor.primaryContainer)
+                        .clipShape(Capsule())
+                }
+                if notice.important {
+                    Text("重要")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Sem.bad)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Sem.badTint)
+                        .clipShape(Capsule())
+                }
+                Text(notice.title.isEmpty ? "门店公告" : notice.title)
+                    .font(.ssBody14)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColor.text)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                if !notice.read {
+                    Circle().fill(AppColor.primary).frame(width: 7, height: 7)
+                }
+            }
+            Text(noticePlainText(notice.body))
+                .font(.ssSmall)
+                .foregroundColor(AppColor.textSecondary)
+                .lineLimit(2)
+            Text([notice.publisher, Fmt.dateTime(notice.publishAt)]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · "))
+                .font(.ssCaption)
+                .foregroundColor(AppColor.textSecondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
+}
+
+private struct NoticeDetailSheet: View {
+    let notice: NoticeInfo
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(notice.title.isEmpty ? "门店公告" : notice.title)
+                        .font(.ssTitle3)
+                        .foregroundColor(AppColor.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text([notice.publisher, Fmt.dateTime(notice.publishAt)]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · "))
+                        .font(.ssCaption)
+                        .foregroundColor(AppColor.textSecondary)
+                    Divider().background(AppColor.outline)
+                    Text(noticePlainText(notice.body))
+                        .font(.ssBody)
+                        .foregroundColor(AppColor.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(16)
+            }
+            .background(AppColor.background.ignoresSafeArea())
+            .navigationTitle("公告详情")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private func noticePlainText(_ html: String) -> String {
+    var text = html
+    text = text.replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+    text = text.replacingOccurrences(of: "</p>", with: "\n", options: .regularExpression)
+    text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+    let entities = [
+        "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">",
+        "&quot;": "\"", "&#39;": "'"
+    ]
+    for (key, value) in entities {
+        text = text.replacingOccurrences(of: key, with: value)
+    }
+    return text.trimmingCharacters(in: .whitespacesAndNewlines)
 }

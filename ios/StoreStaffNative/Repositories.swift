@@ -29,7 +29,9 @@ enum AuthRepository {
             empNo: staff.str("empNo"),
             storeName: store.str("name"),
             phone: account.str("phone"),
-            lastLoginAt: account.str("lastLoginAt")
+            lastLoginAt: account.str("lastLoginAt"),
+            avatar: staff.str("avatar"),
+            feishuEmpNo: staff.str("feishuEmpNo")
         )
         return data
     }
@@ -51,7 +53,9 @@ enum AuthRepository {
             empNo: staff?.str("empNo") ?? SessionStore.shared.empNo,
             storeName: store?.str("name") ?? SessionStore.shared.storeName,
             phone: account?.str("phone"),
-            lastLoginAt: account?.str("lastLoginAt")
+            lastLoginAt: account?.str("lastLoginAt"),
+            avatar: staff?.str("avatar"),
+            feishuEmpNo: staff?.str("feishuEmpNo")
         )
         return data
     }
@@ -79,6 +83,8 @@ enum HomeRepository {
         let displayName = staff.str("displayName").isEmpty ? staff.str("name") : staff.str("displayName")
         let position = staff.str("position")
         let empNo = staff.str("empNo")
+        let feishuEmpNo = staff.str("feishuEmpNo")
+        let avatar = staff.str("avatar")
 
         SessionStore.shared.updateProfile(
             accountName: SessionStore.shared.accountName,
@@ -86,7 +92,9 @@ enum HomeRepository {
             staffName: displayName.isEmpty ? SessionStore.shared.staffName : displayName,
             position: position,
             empNo: empNo,
-            storeName: SessionStore.shared.storeName
+            storeName: SessionStore.shared.storeName,
+            avatar: avatar,
+            feishuEmpNo: feishuEmpNo
         )
 
         let shiftDate = shift?.date ?? ""
@@ -95,6 +103,8 @@ enum HomeRepository {
             position: position,
             employmentType: staff.str("employmentType"),
             empNo: empNo,
+            feishuEmpNo: feishuEmpNo,
+            avatar: avatar,
             storeName: SessionStore.shared.storeName,
             today: shiftDate.isEmpty ? Fmt.today() : shiftDate,
             shift: shift,
@@ -389,20 +399,32 @@ enum MessageRepository {
 // MARK: - 上传与账号
 
 enum UploadRepository {
-    static func uploadImage(data: Data, filename: String, mime: String = "image/jpeg") async throws -> String {
+    static func uploadImage(
+        data: Data,
+        filename: String,
+        mime: String = "image/jpeg",
+        type: String = "task"
+    ) async throws -> String {
         let result = try await APIClient.shared.upload(
             action: "file.upload",
             field: "file",
             filename: filename,
             mime: mime,
             data: data,
-            extra: ["type": "task"]
+            extra: ["type": type]
         )
         let key = result.str("key")
         if key.isEmpty {
             throw APIError(code: "UPLOAD_FAIL", message: "图片上传失败，请重试")
         }
         return key
+    }
+}
+
+enum ProfileRepository {
+    /// 服务端 staff.saveMe 支持 avatar（file.upload 返回的 key）。
+    static func saveAvatar(key: String) async throws {
+        _ = try await APIClient.shared.post("staff.saveMe", ["avatar": key])
     }
 }
 
@@ -414,5 +436,56 @@ enum AccountRepository {
             "newPassword": newPassword,
             "confirmPassword": confirmPassword
         ])
+    }
+}
+
+// MARK: - 公告
+
+struct NoticeInfo: Identifiable {
+    var id = ""
+    var category = ""
+    var title = ""
+    var body = ""
+    var publisher = ""
+    var publishAt = ""
+    var publishedAt = ""
+    var createdAt = ""
+    var important = false
+    var pinned = false
+    var read = false
+}
+
+enum NoticeRepository {
+    static func list() async throws -> [NoticeInfo] {
+        let data = try await APIClient.shared.post("notice.employee.list")
+        return data.objects("list").map { parse($0) }
+    }
+
+    static func get(id: String) async throws -> NoticeInfo? {
+        guard !id.isEmpty else { return nil }
+        let data = try await APIClient.shared.post("notice.employee.get", ["id": id])
+        return data.isEmpty ? nil : parse(data)
+    }
+
+    static func markRead(id: String) async throws {
+        guard !id.isEmpty else { return }
+        _ = try await APIClient.shared.post("notice.markRead", ["id": id])
+    }
+
+    static func parse(_ n: JSON) -> NoticeInfo {
+        let published = n.str("publishedAt").isEmpty ? n.str("publishAt") : n.str("publishedAt")
+        return NoticeInfo(
+            id: n.str("id"),
+            category: n.str("category"),
+            title: n.str("title"),
+            body: n.str("body"),
+            publisher: n.str("publisher"),
+            publishAt: published,
+            publishedAt: published,
+            createdAt: n.str("createdAt"),
+            important: n.boolVal("important"),
+            pinned: n.boolVal("pinned"),
+            read: n.boolVal("read")
+        )
     }
 }

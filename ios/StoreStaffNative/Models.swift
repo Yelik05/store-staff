@@ -7,6 +7,8 @@ struct HomeSnapshot {
     var position: String = ""
     var employmentType: String = ""
     var empNo: String = ""
+    var feishuEmpNo: String = ""
+    var avatar: String = ""
     var storeName: String = ""
     var today: String = ""
     var shift: ShiftToday?

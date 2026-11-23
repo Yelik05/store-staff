@@ -62,7 +62,7 @@ enum Sem {
 enum Radius {
     static let badge: CGFloat = 6
     static let field: CGFloat = 10
-    static let card: CGFloat = 14
+    static let card: CGFloat = 16
     static let sheet: CGFloat = 20
 }
 
@@ -74,7 +74,7 @@ extension View {
             .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .stroke(AppColor.outline.opacity(0.55), lineWidth: 0.6)
+                    .stroke(AppColor.outline, lineWidth: 0.7)
             )
     }
 

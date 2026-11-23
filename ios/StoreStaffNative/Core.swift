@@ -108,6 +108,13 @@ final class SessionStore {
     var staffName: String { value("ss.staffName") }
     var position: String { value("ss.position") }
     var empNo: String { value("ss.empNo") }
+    var feishuEmpNo: String { value("ss.feishuEmpNo") }
+    var avatar: String { value("ss.avatar") }
+    /// 对外展示的工号：优先飞书工号，其次门店工号。
+    var displayEmpNo: String {
+        let feishu = feishuEmpNo.trimmingCharacters(in: .whitespacesAndNewlines)
+        return feishu.isEmpty ? empNo : feishu
+    }
     var storeName: String { value("ss.storeName") }
     var phone: String { value("ss.phone") }
     var lastLoginAt: String { value("ss.lastLoginAt") }
@@ -122,7 +129,9 @@ final class SessionStore {
         empNo: String,
         storeName: String,
         phone: String = "",
-        lastLoginAt: String = ""
+        lastLoginAt: String = "",
+        avatar: String = "",
+        feishuEmpNo: String = ""
     ) {
         Keychain.save(token, key: tokenKey)
         defaults.set(expiresAt, forKey: "ss.expiresAt")
@@ -131,6 +140,8 @@ final class SessionStore {
         defaults.set(staffName, forKey: "ss.staffName")
         defaults.set(position, forKey: "ss.position")
         defaults.set(empNo, forKey: "ss.empNo")
+        defaults.set(feishuEmpNo, forKey: "ss.feishuEmpNo")
+        defaults.set(avatar, forKey: "ss.avatar")
         defaults.set(storeName, forKey: "ss.storeName")
         defaults.set(phone, forKey: "ss.phone")
         defaults.set(lastLoginAt, forKey: "ss.lastLoginAt")
@@ -144,7 +155,9 @@ final class SessionStore {
         empNo: String,
         storeName: String,
         phone: String? = nil,
-        lastLoginAt: String? = nil
+        lastLoginAt: String? = nil,
+        avatar: String? = nil,
+        feishuEmpNo: String? = nil
     ) {
         defaults.set(accountName, forKey: "ss.accountName")
         defaults.set(role, forKey: "ss.role")
@@ -154,12 +167,18 @@ final class SessionStore {
         defaults.set(storeName, forKey: "ss.storeName")
         if let phone = phone { defaults.set(phone, forKey: "ss.phone") }
         if let lastLoginAt = lastLoginAt { defaults.set(lastLoginAt, forKey: "ss.lastLoginAt") }
+        if let avatar = avatar { defaults.set(avatar, forKey: "ss.avatar") }
+        if let feishuEmpNo = feishuEmpNo { defaults.set(feishuEmpNo, forKey: "ss.feishuEmpNo") }
+    }
+
+    func setAvatar(_ key: String) {
+        defaults.set(key, forKey: "ss.avatar")
     }
 
     func clear() {
         Keychain.delete(tokenKey)
         ["ss.expiresAt", "ss.accountName", "ss.role", "ss.staffName", "ss.position",
-         "ss.empNo", "ss.storeName", "ss.phone", "ss.lastLoginAt"].forEach {
+         "ss.empNo", "ss.feishuEmpNo", "ss.avatar", "ss.storeName", "ss.phone", "ss.lastLoginAt"].forEach {
             defaults.removeObject(forKey: $0)
         }
     }
@@ -332,6 +351,10 @@ final class APIClient {
             throw APIError(code: code, message: message, status: status)
         }
 
+        // 兼容部分接口 data 直接为数组（如 salary.myMonths、settings.dimensions）。
+        if let array = root["data"] as? [Any] {
+            return ["list": array]
+        }
         return root["data"] as? JSON ?? [:]
     }
 }

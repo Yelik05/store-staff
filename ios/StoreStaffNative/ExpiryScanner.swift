@@ -1,6 +1,5 @@
 import SwiftUI
 import AVFoundation
-import Vision
 import UIKit
 
 // MARK: - 扫码结果
@@ -26,12 +25,19 @@ enum QrParser {
         var time = ""
         var timeError = ""
 
-        // 1) JSON
+        // 1) JSON：优先取 expirationTime / 到期字段，开封与生产时间不参与到期日。
         if let data = text.data(using: .utf8),
            let object = (try? JSONSerialization.jsonObject(with: data, options: [])) as? JSON {
-            name = firstValue(object, keys: ["name", "product", "material", "品名", "物料", "名称"])
-            date = firstValue(object, keys: ["expiry", "expire", "due", "validUntil", "有效期", "到期", "效期"])
+            name = firstValue(object, keys: [
+                "name", "productName", "materialName", "itemName",
+                "product", "material", "品名", "物料名称", "物料", "名称", "产品名称"
+            ])
+            date = firstValue(object, keys: [
+                "expirationTime", "expiration_time", "expiration", "expiryTime", "expiry",
+                "expire", "expireDate", "due", "validUntil", "有效期至", "有效期", "到期时间", "到期", "效期"
+            ])
             time = firstValue(object, keys: ["time", "时间"])
+            if !date.isEmpty { date = normalizeDateValue(date) }
         }
 
         // 2) URL 查询参数
@@ -42,10 +48,10 @@ enum QrParser {
                 guard parts.count == 2 else { continue }
                 let key = String(parts[0]).lowercased()
                 let value = String(parts[1]).removingPercentEncoding ?? String(parts[1])
-                if name.isEmpty && ["name", "product", "material", "品名", "物料", "名称"].contains(key) {
+                if name.isEmpty && ["name", "productname", "materialname", "itemname", "product", "material", "品名", "物料", "名称"].contains(key) {
                     name = value
                 }
-                if date.isEmpty && ["expiry", "expire", "due", "validuntil", "有效期", "到期", "效期"].contains(key) {
+                if date.isEmpty && ["expirationtime", "expiration_time", "expiration", "expirytime", "expiry", "expire", "due", "validuntil", "有效期", "到期", "效期"].contains(key) {
                     date = value
                 }
                 if time.isEmpty && ["time", "时间"].contains(key) {
@@ -54,9 +60,11 @@ enum QrParser {
             }
         }
 
+        if !date.isEmpty { date = normalizeDateValue(date) }
+
         if name.isEmpty {
             for pattern in [
-                "(?:品名|物料名称|物料|名称|product|name)\\s*[:：]\\s*([^;；,\\n\\r]+)",
+                "(?:品名|物料名称|物料|名称|productName|materialName|itemName|product|name)\\s*[:：]\\s*([^;；,\\n\\r]+)",
                 "([^;；,\\n\\r]{1,24})\\s*(?:有效期|到期|效期)"
             ] {
                 if let groups = Fmt.regexGroups(pattern, text), groups.count > 1 {
@@ -66,13 +74,19 @@ enum QrParser {
             }
         }
 
-        // 3) 显式日期
-        let datePatterns = [
-            "(?:有效期至|有效期|保质期至|到期时间|到期|效期|expiry|expire|exp|due)\\s*[:：]?\\s*(20\\d{2}[-/.年]\\d{1,2}[-/.月]\\d{1,2}日?)",
-            "(20\\d{2}[-/.年]\\d{1,2}[-/.月]\\d{1,2}日?)"
+        // 3) 显式日期：优先到期标签，开封/生产时间不得作为到期日
+        let labeledPatterns = [
+            "(?:expirationtime|expiration_time|expiration|expirytime|expiry|expire|exp|due|有效期至|有效期|保质期至|到期时间|到期|效期)\\s*[\"'=:：]?\\s*(20\\d{2}[-/.年]\\d{1,2}[-/.月]\\d{1,2}日?)",
+            "(?:expirationtime|expiration_time|expiration|expirytime|expiry|expire|exp|due)\\s*[\"'=:：]?\\s*(\\d{10,13})"
         ]
-        for pattern in datePatterns where date.isEmpty {
+        for pattern in labeledPatterns where date.isEmpty {
             if let groups = Fmt.regexGroups(pattern, text), groups.count > 1 {
+                let raw = groups[1]
+                date = raw.count >= 10 ? dateFromTimestamp(raw) : normalizeDate(raw)
+            }
+        }
+        if date.isEmpty && !hasProductionMarker(text) {
+            if let groups = Fmt.regexGroups("(20\\d{2}[-/.年]\\d{1,2}[-/.月]\\d{1,2}日?)", text), groups.count > 1 {
                 date = normalizeDate(groups[1])
             }
         }
@@ -113,7 +127,7 @@ enum QrParser {
                 }
             }
         }
-        if date.isEmpty {
+        if date.isEmpty && !hasProductionMarker(text) {
             // 6) 8 位紧凑日期
             if let groups = Fmt.regexGroups("(?<!\\d)(20\\d{6})(?!\\d)", text), groups.count > 1 {
                 date = normalizeDate(groups[1])
@@ -178,30 +192,68 @@ enum QrParser {
         return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
+    private static func normalizeDateValue(_ raw: String) -> String {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return "" }
+        if value.count == 10 || value.count == 13, value.allSatisfy({ $0.isNumber }) {
+            return dateFromTimestamp(value)
+        }
+        let normalized = normalizeDate(value)
+        return normalized.isEmpty ? value : normalized
+    }
+
+    private static func dateFromTimestamp(_ raw: String) -> String {
+        let digits = normalizeDigits(raw).filter { $0.isNumber }
+        guard (digits.count == 10 || digits.count == 13), let value = Double(digits) else { return "" }
+        let seconds = digits.count == 13 ? value / 1000 : value
+        let date = Date(timeIntervalSince1970: seconds)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let year = Calendar.current.component(.year, from: date)
+        return (year >= 2000 && year <= 2100) ? formatter.string(from: date) : ""
+    }
+
+    /// 出现开封/生产等标签时，不再用无标签日期兜底，避免把开封日当成到期日。
+    private static func hasProductionMarker(_ text: String) -> Bool {
+        Fmt.regexGroups("(?:开封|开启|生产日期|生产|open|production|mfg|manufactured)", text) != nil
+    }
+
     private static func firstValue(_ object: JSON, keys: [String]) -> String {
-        for key in keys {
-            if let value = object[key] as? String, !value.isEmpty { return value }
-            if let number = object[key] as? NSNumber { return number.stringValue }
+        let wanted = Set(keys.map { normalizeKey($0) })
+        for (key, value) in object {
+            guard wanted.contains(normalizeKey(key)) else { continue }
+            if let text = value as? String,
+               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return text
+            }
+            if let number = value as? NSNumber { return number.stringValue }
         }
         return ""
+    }
+
+    private static func normalizeKey(_ key: String) -> String {
+        key.lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
     }
 }
 
 // MARK: - 相机控制器
 
-final class ScannerController: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
+final class ScannerController: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate {
     @Published var hint = "将效期标签二维码放入框内"
     let session = AVCaptureSession()
 
     var onCode: ((String) -> Void)?
 
     private let sessionQueue = DispatchQueue(label: "ss.scanner.session")
-    private let videoQueue = DispatchQueue(label: "ss.scanner.video")
     private var configured = false
     private var device: AVCaptureDevice?
     private var lastEmit = Date.distantPast
     private var lastValue = ""
-    private var lastOCR = Date.distantPast
 
     func start() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -270,14 +322,6 @@ final class ScannerController: NSObject, ObservableObject, AVCaptureMetadataOutp
                     metadata.metadataObjectTypes = wanted.filter { metadata.availableMetadataObjectTypes.contains($0) }
                 }
 
-                let video = AVCaptureVideoDataOutput()
-                video.alwaysDiscardsLateVideoFrames = true
-                video.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-                video.setSampleBufferDelegate(self, queue: self.videoQueue)
-                if self.session.canAddOutput(video) {
-                    self.session.addOutput(video)
-                }
-
                 self.configured = true
                 self.session.commitConfiguration()
             }
@@ -298,29 +342,7 @@ final class ScannerController: NSObject, ObservableObject, AVCaptureMetadataOutp
         }
     }
 
-    // MARK: OCR 兜底
-
-    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        let now = Date()
-        guard now.timeIntervalSince(lastOCR) > 1.2, now.timeIntervalSince(lastEmit) > 1.8 else { return }
-        lastOCR = now
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-
-        let request = VNRecognizeTextRequest { [weak self] request, _ in
-            guard let self = self else { return }
-            let observations = request.results as? [VNRecognizedTextObservation] ?? []
-            let text = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
-            if !text.isEmpty {
-                self.emit(text)
-            }
-        }
-        request.recognitionLevel = .fast
-        request.recognitionLanguages = ["zh-Hans", "en-US"]
-        request.usesLanguageCorrection = false
-
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: [:])
-        try? handler.perform([request])
-    }
+    // MARK: 仅二维码，不做文字识别
 
     private func emit(_ raw: String) {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -400,9 +422,6 @@ struct ExpiryScannerView: View {
         .onAppear {
             scanner.onCode = { text in handle(text) }
             scanner.start()
-            if selectedMaterialId.isEmpty {
-                selectedMaterialId = materials.first?.id ?? ""
-            }
         }
         .onDisappear { scanner.stop() }
         .sheet(isPresented: $showManual) {
@@ -480,7 +499,7 @@ struct ExpiryScannerView: View {
                 .font(.system(size: 13))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
-            Text("请靠近拍摄、避免反光或褶皱，并让二维码填满取景框。识别不到时会自动尝试文字识别。")
+            Text("请让二维码填满取景框，避免反光或褶皱。仅识别二维码，不做文字识别。")
                 .font(.system(size: 11))
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
@@ -523,6 +542,7 @@ struct ExpiryScannerView: View {
                         .foregroundColor(.yellow)
                 } else {
                     Picker("", selection: $selectedMaterialId) {
+                        Text("请选择物料").tag("")
                         ForEach(materials) { material in
                             Text(material.name).tag(material.id)
                         }
@@ -532,6 +552,17 @@ struct ExpiryScannerView: View {
                     .labelsHidden()
                 }
                 Spacer(minLength: 0)
+            }
+            if !materials.isEmpty {
+                if let matched = materials.first(where: { $0.id == selectedMaterialId }) {
+                    Text("已自动匹配：\(matched.name)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.75))
+                } else {
+                    Text("未匹配物料，请手动选择后完成")
+                        .font(.system(size: 11))
+                        .foregroundColor(.yellow)
+                }
             }
 
             if let message = message {
@@ -567,6 +598,8 @@ struct ExpiryScannerView: View {
                         .background(AppColor.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
+                .disabled(selectedMaterialId.isEmpty || result.date.isEmpty)
+                .opacity(selectedMaterialId.isEmpty || result.date.isEmpty ? 0.55 : 1)
             }
             .padding(.top, 2)
         }
@@ -585,15 +618,15 @@ struct ExpiryScannerView: View {
             message = parsed.timeError.isEmpty ? "未识别到有效期，请重试" : parsed.timeError
             return
         }
-        var updated = parsed
+        let updated = parsed
         if let material = parsed.material {
             selectedMaterialId = material.id
+            message = nil
+        } else {
+            // 未命中物料时停留在待确认状态，由用户手动选择，不再默认第一项。
+            selectedMaterialId = ""
+            message = "未匹配到物料，请在下方手动选择"
         }
-        if selectedMaterialId.isEmpty, let first = materials.first {
-            selectedMaterialId = first.id
-            updated.material = first
-        }
-        message = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         withAnimation {
             result = updated
